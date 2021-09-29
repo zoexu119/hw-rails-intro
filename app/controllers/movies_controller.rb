@@ -10,20 +10,27 @@ class MoviesController < ApplicationController
       @movies = Movie.all
       @all_ratings = Movie.all_ratings
 
-      if params[:ratings]
-        @ratings_to_show = params[:ratings].keys
-      else
-        @ratings_to_show = @all_ratings
+      @sort_by = params[:sort] || session[:sort]
+      @ratings_to_show = params[:ratings] || session[:ratings]
+
+      if !@ratings_to_show
+        @ratings_to_show = Hash.new
+        @all_ratings.each {|r| @ratings_to_show[r] = 1}
       end
 
-      @movies.where!(rating: @ratings_to_show)
+      session[:sort], session[:ratings] = @sort_by, @ratings_to_show
 
-      case params[:sort]
+      if params[:sort] != session[:sort] || params[:ratings] != session[:ratings]
+        flash.keep
+        redirect_to movies_path :sort => @sort_by, :ratings => @ratings_to_show
+      end
+
+      @movies.where!(rating: @ratings_to_show.keys).order!(@sort_by)
+
+      case @sort_by
           when 'title'
-            @movies.order!('title')
             @title_header_class = 'hilite'
           when 'release_date'
-            @movies.order!('release_date')
             @release_date_header_class = 'hilite'
           end
     end
